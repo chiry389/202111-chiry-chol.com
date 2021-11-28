@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.knight.dao.InvestDAO">
+
+    <resultMap id="productInfo" type="map">
+        <result javaType="java.lang.Long" column="product_id" property="productId"/>
+        <result javaType="java.lang.String" column="title" property="title"/>
+        <result javaType="java.lang.Long" column="total_investing_amount" property="totalInvestingAmount"/>
+        <result javaType="java.lang.String" column="started_at" property="startedAt"/>
+        <result javaType="java.lang.String" column="finished_at" property="finishedAt"/>
+        <result javaType="java.lang.String" column="product_status" property="productStatus"/>
+    </resultMap>
+    <select id="selectProducts" parameterType="map" resultMap="productInfo">
+        SELECT
+            product_id, title, total_investing_amount, started_at, finished_at, product_status
+        FROM
+            PRODUCT_INFO
+        WHERE
+            started_at <![CDATA[>=]]> #{startedAt}
+            AND finished_at <![CDATA[<=]]> #{finishedAt}
+        ORDER BY
+            product_id DESC
+    </select>
+
+    <resultMap id="investStatus" type="map">
+        <result javaType="java.lang.Long" column="product_id" property="productId"/>
+        <result javaType="java.lang.Long" column="total_investing_amount" property="totalInvestingAmount"/>
+        <result javaType="java.lang.Long" column="current_investing_amount" property="currentInvestingAmount"/>
+    </resultMap>
+    <select id="selectInvestStatusByProductId" parameterType="map" resultMap="investStatus">
+        SELECT
+            PI.product_id, PI.total_investing_amount,
+            IFNULL(SUM(II.amount), 0) AS current_investing_amount
+        FROM
+            PRODUCT_INFO AS PI
+            LEFT OUTER JOIN INVEST_INFO AS II ON PI.product_id = II.product_id AND II.invested_status = 'OK'
+        WHERE
+            PI.product_id = #{productId}
+        GROUP BY
+            PI.product_id
+    </select>
+
+    <insert id="insertInvest" parameterType="map">
+        INSERT INTO INVEST_INFO(user_id, product_id, amount, invested_status)
+        VALUES (
+                #{userId},
+                #{productId},
+                #{amount},
+                'OK'
+               )
+    </insert>
+
+    <resultMap id="myInvest" type="map">
+        <result javaType="java.lang.Long" column="product_id" property="productId"/>
+        <result javaType="java.lang.String" column="title" property="title"/>
+        <result javaType="java.lang.Long" column="total_investing_amount" property="totalInvestingAmount"/>
+        <result javaType="java.lang.Long" column="amount" property="myInvestingAmount"/>
+        <result javaType="java.lang.String" column="invested_at" property="investedAt"/>
+    </resultMap>
+    <select id="selectMyInvests" parameterType="map" resultMap="myInvest">
+        SELECT
+            PI.product_id, PI.title, PI.total_investing_amount, II.amount, II.invested_at
+        FROM
+            PRODUCT_INFO AS PI
+            INNER JOIN INVEST_INFO AS II ON PI.product_id = II.product_id AND II.invested_status = 'OK' AND II.user_id=#{userId}
+        ORDER BY PI.product_id DESC
+    </select>
+</mapper>
